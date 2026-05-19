@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>বেতন নির্ধারণ জেনারেটর</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --g:#1a6b3c;--dg:#0e4226;--gold:#c8a22a;--lgold:#f0d878;
+  --red:#c0392b;--bg:#f0ece0;--card:#fffdf5;--txt:#1a1a1a;
+  --muted:#666;--border:#c8bfa0;--success:#27ae60;--accent:#e6f4ee;
+  --warn:#fff8e6;--wborder:#e8c843;
+}
+
+body{
+  font-family:'Hind Siliguri',sans-serif;
+  background:var(--bg);
+  min-height:100vh;padding:20px 16px 60px;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 10% 10%,rgba(26,107,60,.07) 0%,transparent 60%),
+    radial-gradient(ellipse 50% 50% at 90% 85%,rgba(200,162,42,.07) 0%,transparent 60%),
+    radial-gradient(ellipse 40% 30% at 50% 50%,rgba(14,66,38,.04) 0%,transparent 60%);
+}
+
+/* Floating orbs */
+.orb{position:fixed;border-radius:50%;filter:blur(70px);opacity:.12;pointer-events:none;z-index:0;animation:drift 14s ease-in-out infinite}
+.orb1{width:500px;height:500px;background:var(--g);top:-150px;left:-150px;animation-delay:0s}
+.orb2{width:350px;height:350px;background:var(--gold);bottom:-100px;right:-100px;animation-delay:5s}
+.orb3{width:250px;height:250px;background:#1a3a6b;top:40%;right:5%;animation-delay:10s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(25px,-18px) scale(1.04)}66%{transform:translate(-18px,25px) scale(.96)}}
+
+.wrap{max-width:860px;margin:0 auto;position:relative;z-index:1}
+
+/* Header */
+.hdr{text-align:center;margin-bottom:30px;animation:su .7s ease both}
+@keyframes su{from{opacity:0;transform:translateY(-28px)}to{opacity:1;transform:translateY(0)}}
+.badge{display:inline-block;background:linear-gradient(135deg,var(--dg),var(--g));color:#fff;padding:5px 18px;border-radius:50px;font-size:11px;font-weight:700;letter-spacing:2px;margin-bottom:10px;text-transform:uppercase}
+h1{font-size:clamp(20px,5vw,32px);font-weight:700;color:var(--dg);line-height:1.3}
+h1 em{color:var(--gold);font-style:normal}
+.hdivider{width:56px;height:3px;background:linear-gradient(90deg,var(--g),var(--gold));margin:10px auto;border-radius:2px}
+.hsub{font-size:13px;color:var(--muted)}
+
+/* Card */
+.card{
+  background:var(--card);border-radius:22px;
+  border:1.5px solid var(--border);
+  box-shadow:0 6px 32px rgba(0,0,0,.08),0 1px 4px rgba(0,0,0,.04);
+  margin-bottom:20px;overflow:hidden;
+  animation:fu .65s ease both
+}
+@keyframes fu{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+.card:nth-child(2){animation-delay:.08s}
+.card:nth-child(3){animation-delay:.16s}
+
+.card-hdr{
+  background:linear-gradient(135deg,rgba(14,66,38,.06),rgba(26,107,60,.04));
+  border-bottom:1.5px solid var(--border);
+  padding:16px 24px;display:flex;align-items:center;gap:10px
+}
+.card-hdr-icon{
+  width:32px;height:32px;border-radius:10px;
+  background:linear-gradient(135deg,var(--dg),var(--g));
+  display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0
+}
+.card-hdr-title{font-size:15px;font-weight:700;color:var(--dg)}
+.card-hdr-sub{font-size:12px;color:var(--muted);margin-top:1px}
+.card-body{padding:22px 24px}
+
+/* Grid */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:18px}
+@media(max-width:620px){.g2,.g3,.g4{grid-template-columns:1fr}}
+@media(max-width:800px) and (min-width:621px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}}
+
+/* ─── Floating Label Field ─── */
+.fl-field{position:relative;margin-top:6px}
+
+.fl-field input,.fl-field select{
+  width:100%;padding:18px 16px 8px;
+  border:1.5px solid var(--border);border-radius:14px;
+  font-size:15px;font-family:'Hind Siliguri',sans-serif;
+  background:#fff;color:var(--txt);
+  transition:border-color .25s,box-shadow .25s;outline:none;
+  appearance:none;-webkit-appearance:none;
+}
+.fl-field input:focus,.fl-field select:focus{
+  border-color:var(--g);
+  box-shadow:0 0 0 3px rgba(26,107,60,.12)
+}
+.fl-field input[readonly]{
+  background:var(--accent);color:var(--dg);font-weight:600;cursor:default
+}
+.fl-field input[readonly]:focus{border-color:var(--border);box-shadow:none}
+
+.fl-field label{
+  position:absolute;left:16px;top:50%;transform:translateY(-50%);
+  font-size:14px;color:var(--muted);pointer-events:none;
+  transition:all .2s;font-weight:500;background:transparent;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%
+}
+.fl-field input:focus ~ label,
+.fl-field input:not(:placeholder-shown) ~ label,
+.fl-field input[type="date"] ~ label,
+.fl-field select:focus ~ label,
+.fl-field.has-val label{
+  top:10px;transform:translateY(0);
+  font-size:10.5px;color:var(--g);font-weight:700;letter-spacing:.4px
+}
+.fl-field .note{font-size:11px;color:var(--muted);margin-top:5px;padding-left:4px;font-style:italic}
+
+/* select arrow */
+.fl-field select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;
+  cursor:pointer
+}
+
+/* ─── Toggle Switch ─── */
+.toggle-row{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 18px;border-radius:14px;
+  border:1.5px solid var(--border);background:#fff;
+  cursor:pointer;transition:all .2s;user-select:none
+}
+.toggle-row:hover{border-color:var(--g);background:var(--accent)}
+.toggle-row.active{border-color:var(--g);background:var(--accent)}
+
+.sw{
+  position:relative;width:44px;height:24px;flex-shrink:0
+}
+.sw input{opacity:0;width:0;height:0;position:absolute}
+.sw-track{
+  position:absolute;inset:0;border-radius:12px;
+  background:#d0ccbf;transition:background .25s;cursor:pointer
+}
+.sw input:checked + .sw-track{background:var(--g)}
+.sw-knob{
+  position:absolute;top:3px;left:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);
+  transition:transform .25s;pointer-events:none
+}
+.sw input:checked ~ .sw-knob{transform:translateX(20px)}
+
+.toggle-label{flex:1}
+.toggle-label-title{font-size:14px;font-weight:600;color:var(--txt)}
+.toggle-label-sub{font-size:11px;color:var(--muted);margin-top:2px}
+
+.toggle-field{margin-top:14px;animation:expand .25s ease}
+@keyframes expand{from{opacity:0;transform:scaleY(.9) translateY(-6px)}to{opacity:1;transform:scaleY(1) translateY(0)}}
+
+/* ─── Excel Upload ─── */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:16px;
+  padding:28px 20px;text-align:center;
+  cursor:pointer;transition:all .25s;background:#fafaf5;
+  position:relative
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--g);background:var(--accent)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:36px;margin-bottom:10px}
+.upload-title{font-size:15px;font-weight:700;color:var(--dg);margin-bottom:4px}
+.upload-sub{font-size:12px;color:var(--muted)}
+.upload-success{
+  display:none;background:var(--accent);border:1.5px solid var(--g);
+  border-radius:12px;padding:12px 18px;margin-top:14px;
+  font-size:13px;font-weight:600;color:var(--dg);
+  display:none;align-items:center;gap:10px
+}
+.upload-success.show{display:flex}
+
+.template-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:14px;padding:8px 18px;border-radius:50px;
+  border:1.5px solid var(--border);background:#fff;
+  font-size:13px;font-weight:600;color:var(--dg);cursor:pointer;
+  transition:all .2s;text-decoration:none
+}
+.template-btn:hover{border-color:var(--g);background:var(--accent)}
+
+/* Grade table preview */
+.grade-table-wrap{
+  margin-top:16px;max-height:240px;overflow-y:auto;overflow-x:auto;border-radius:12px;
+  border:1.5px solid var(--border);display:none
+}
+.grade-table-wrap.show{display:block}
+.grade-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+.grade-table th{
+  background:linear-gradient(135deg,var(--dg),var(--g));
+  color:#fff;padding:8px 10px;text-align:center;font-weight:600;
+  position:sticky;top:0;z-index:1
+}
+.grade-table td{padding:7px 10px;border-bottom:1px solid #ede8d8;color:var(--txt);text-align:center}
+.grade-table td:first-child{text-align:left;position:sticky;left:0;background:inherit;z-index:1}
+.grade-table th:first-child{position:sticky;left:0;z-index:2}
+.grade-table tr:last-child td{border-bottom:none}
+.grade-table tr:hover td{background:#f5f0e8}
+
+/* Buttons */
+.btn-row{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
+button.primary{
+  padding:14px 36px;border:none;border-radius:50px;
+  background:linear-gradient(135deg,var(--dg),var(--g));
+  color:#fff;font-family:'Hind Siliguri',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;box-shadow:0 4px 18px rgba(26,107,60,.32);
+  transition:all .2s
+}
+button.primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(26,107,60,.4)}
+button.primary:active{transform:translateY(0)}
+button.ghost{
+  padding:14px 28px;border:1.5px solid var(--border);border-radius:50px;
+  background:#fff;font-family:'Hind Siliguri',sans-serif;font-size:14px;font-weight:600;
+  color:var(--muted);cursor:pointer;transition:all .2s
+}
+button.ghost:hover{background:var(--accent);border-color:var(--g);color:var(--dg)}
+
+/* Error */
+.err{
+  display:none;background:#fff0f0;border:1px solid #f5c6c6;color:var(--red);
+  border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;margin-top:14px
+}
+
+/* ─── Result ─── */
+#result{display:none}
+#result.show{display:block}
+
+.res-card{
+  background:var(--card);border-radius:22px;
+  border:1.5px solid var(--border);
+  box-shadow:0 8px 40px rgba(0,0,0,.1);
+  overflow:hidden;animation:fu .5s ease
+}
+
+.res-hdr{
+  background:linear-gradient(135deg,var(--dg) 0%,var(--g) 100%);
+  padding:20px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px
+}
+.res-hdr h2{font-size:18px;font-weight:700;color:#fff}
+.res-hdr-meta{font-size:12px;color:rgba(255,255,255,.7);margin-top:2px}
+.stamp{
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);
+  padding:5px 16px;border-radius:50px;font-size:11px;font-weight:700;
+  color:#fff;letter-spacing:1.5px;text-transform:uppercase
+}
+.prt-btn{
+  background:rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.3);
+  color:#fff;padding:7px 18px;border-radius:50px;font-size:12px;font-weight:600;
+  cursor:pointer;transition:all .2s;font-family:'Hind Siliguri',sans-serif
+}
+.prt-btn:hover{background:rgba(255,255,255,.25)}
+
+.step-list{list-style:none;padding:0}
+.step-item{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:13px 24px;border-bottom:1px solid #f0ebe0;
+  transition:background .15s
+}
+.step-item:hover{background:#faf8f0}
+.step-item:last-child{border-bottom:none}
+.step-num{
+  min-width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--dg),var(--g));
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px
+}
+.step-content{flex:1}
+.step-lbl{font-size:12px;color:var(--muted);margin-bottom:2px}
+.step-val{font-size:16px;font-weight:700;color:var(--dg)}
+.formula{font-size:11px;font-weight:500;color:var(--muted);margin-left:6px}
+.hi{background:var(--accent)!important;border-left:4px solid var(--g)}
+.hi .step-val{color:var(--success);font-size:17px}
+.wo{background:var(--warn)!important;border-left:4px solid var(--wborder)}
+.wo .step-val{color:#9a7200}
+.tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:4px;font-weight:700;margin-left:6px;vertical-align:middle}
+.tok{background:#d1f5e0;color:#145a32}
+.twarn{background:#fff3cd;color:#856404}
+
+/* Final box */
+.fin{
+  margin:16px 24px 24px;
+  background:linear-gradient(135deg,#0e4226,#1a6b3c);
+  border-radius:18px;padding:22px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;
+  box-shadow:0 8px 32px rgba(14,66,38,.3)
+}
+.fin-lbl{font-size:13px;color:rgba(255,255,255,.75);margin-bottom:4px}
+.fin-amt{font-size:28px;font-weight:700;color:#fff}
+.fin-amt span{font-size:15px;color:rgba(255,255,255,.75);font-weight:500}
+.fin-gain{
+  background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.22);
+  border-radius:14px;padding:14px 20px;text-align:right;flex-shrink:0
+}
+.fin-gain-lbl{font-size:11px;color:rgba(255,255,255,.65);margin-bottom:4px}
+.fin-gain-val{font-size:22px;font-weight:700;color:var(--lgold)}
+.fin-note{font-size:11px;color:rgba(255,255,255,.5);margin-top:4px}
+
+@media print{
+  .orb,.btn-row,.prt-btn,#excelSection,.toggle-row,
+  #printPersonalCard ~ .card,.hdr button{display:none!important}
+  body{background:#fff;padding:0}
+  #result{display:block!important}
+  .res-card{box-shadow:none;border:1px solid #ddd}
+  .fin,.res-hdr,.step-item.hi,.step-item.wo,.step-num{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* scrollbar */
+.grade-table-wrap::-webkit-scrollbar{width:6px;height:6px}
+.grade-table-wrap::-webkit-scrollbar-track{background:#f0ece0}
+.grade-table-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="badge">প্রস্তাবিত বেতন স্কেল ২০২৬</div>
+    <h1>বেতন নির্ধারণ <em>জেনারেটর</em></h1>
+    <div class="hdivider"></div>
+    <p class="hsub">নতুন বেতন স্কেল অনুযায়ী স্বয়ংক্রিয় ফিক্সেশন • সকল গ্রেড সমর্থিত</p>
+    <div style="margin-top:12px">
+      <button class="template-btn" onclick="downloadDocumentation()" style="margin:0 auto">
+        📄 সিস্টেম ব্যবহার নির্দেশিকা ডাউনলোড করুন (.txt)
+      </button>
+    </div>
+  </div>
+
+  <!-- Excel Upload Card -->
+  <div class="card" id="excelSection" style="animation-delay:.04s">
+    <div class="card-hdr">
+      <div class="card-hdr-icon">📊</div>
+      <div>
+        <div class="card-hdr-title">প্রস্তাবিত স্কেল আপলোড</div>
+        <div class="card-hdr-sub">Excel থেকে গ্রেড ডেটা লোড করুন — কলাম: গ্রেড | নতুন স্কেল | ধাপ-১ … ধাপ-১৮</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="upload-zone" id="dropZone">
+        <input type="file" id="xlsxFile" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])">
+        <div class="upload-icon">📁</div>
+        <div class="upload-title">Excel ফাইল ড্রপ করুন বা ক্লিক করুন</div>
+        <div class="upload-sub">.xlsx / .xls / .csv সমর্থিত • কলাম: গ্রেড | নতুন স্কেল | ধাপ-১ | ধাপ-২ | … | ধাপ-১৮</div>
+      </div>
+
+      <div class="upload-success" id="uploadSuccess">
+        <span>✅</span>
+        <span id="uploadMsg">ডেটা লোড হয়েছে</span>
+        <button onclick="clearUpload()" style="margin-left:auto;background:none;border:none;cursor:pointer;color:var(--red);font-size:16px">✕</button>
+      </div>
+
+      <div style="text-align:center">
+        <button class="template-btn" onclick="downloadTemplate()">⬇️ টেমপ্লেট ডাউনলোড করুন</button>
+      </div>
+
+      <div class="grade-table-wrap" id="gradeTableWrap">
+        <table class="grade-table">
+          <thead>
+            <tr>
+              <th>গ্রেড</th><th>নতুন স্কেল</th>
+              <th>ধাপ-১</th><th>ধাপ-২</th><th>ধাপ-৩</th><th>ধাপ-৪</th><th>ধাপ-৫</th><th>ধাপ-৬</th>
+              <th>ধাপ-৭</th><th>ধাপ-৮</th><th>ধাপ-৯</th><th>ধাপ-১০</th><th>ধাপ-১১</th><th>ধাপ-১২</th>
+              <th>ধাপ-১৩</th><th>ধাপ-১৪</th><th>ধাপ-১৫</th><th>ধাপ-১৬</th><th>ধাপ-১৭</th><th>ধাপ-১৮</th>
+            </tr>
+          </thead>
+          <tbody id="gradeTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Personal Info Card -->
+  <div class="card" style="animation-delay:.10s">
+    <div class="card-hdr">
+      <div class="card-hdr-icon">👤</div>
+      <div>
+        <div class="card-hdr-title">ব্যক্তিগত তথ্য</div>
+        <div class="card-hdr-sub">কর্মকর্তা/কর্মচারীর বিস্তারিত তথ্য পূরণ করুন</div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="g3" style="margin-bottom:18px">
+        <div class="fl-field" id="ff-pname">
+          <input type="text" id="pName" placeholder=" " oninput="markVal('ff-pname')">
+          <label>কর্মকর্তা/কর্মচারীর নাম</label>
+        </div>
+        <div class="fl-field" id="ff-ppf">
+          <input type="text" id="pPF" placeholder=" " oninput="markVal('ff-ppf')">
+          <label>পিএফ নম্বর</label>
+        </div>
+        <div class="fl-field" id="ff-pdesig">
+          <input type="text" id="pDesig" placeholder=" " oninput="markVal('ff-pdesig')">
+          <label>পদবী (বর্তমান)</label>
+        </div>
+      </div>
+
+      <div class="g3" style="margin-bottom:18px">
+        <div class="fl-field" id="ff-pjoin">
+          <input type="date" id="pJoinDate" placeholder=" " oninput="markVal('ff-pjoin')">
+          <label>যোগদানের তারিখ</label>
+        </div>
+        <div class="fl-field" id="ff-pjoindesig">
+          <input type="text" id="pJoinDesig" placeholder=" " oninput="markVal('ff-pjoindesig')">
+          <label>যোগদানের তারিখে পদবী</label>
+        </div>
+        <div class="fl-field" id="ff-pwork">
+          <input type="text" id="pWorkplace" placeholder=" " oninput="markVal('ff-pwork')">
+          <label>বর্তমান কর্মস্থল</label>
+        </div>
+      </div>
+
+      <div class="g2">
+        <div class="fl-field" id="ff-pnid">
+          <input type="text" id="pNID" placeholder=" " oninput="markVal('ff-pnid')" maxlength="17">
+          <label>জাতীয় পরিচয়পত্র (NID) নম্বর</label>
+        </div>
+        <div class="fl-field" id="ff-pmobile">
+          <input type="tel" id="pMobile" placeholder=" " oninput="markVal('ff-pmobile')" maxlength="14">
+          <label>মোবাইল নম্বর</label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Input Card -->
+  <div class="card" style="animation-delay:.12s">
+    <div class="card-hdr">
+      <div class="card-hdr-icon">📝</div>
+      <div>
+        <div class="card-hdr-title">বর্তমান বেতন তথ্য</div>
+        <div class="card-hdr-sub">কর্মকর্তার বর্তমান গ্রেড ও বেতনের বিবরণ</div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <div class="g2" style="margin-bottom:18px">
+        <div class="fl-field" id="ff-grade">
+          <select id="grade" onchange="onGradeChange()">
+            <option value=""> </option>
+            <option value="1">গ্রেড ১</option>
+            <option value="2">গ্রেড ২</option>
+            <option value="3">গ্রেড ৩</option>
+            <option value="4">গ্রেড ৪</option>
+            <option value="5">গ্রেড ৫</option>
+            <option value="6">গ্রেড ৬</option>
+            <option value="7">গ্রেড ৭</option>
+            <option value="8">গ্রেড ৮</option>
+            <option value="9">গ্রেড ৯</option>
+            <option value="10">গ্রেড ১০</option>
+            <option value="11">গ্রেড ১১</option>
+            <option value="12">গ্রেড ১২</option>
+            <option value="13">গ্রেড ১৩</option>
+            <option value="14">গ্রেড ১৪</option>
+            <option value="15">গ্রেড ১৫</option>
+            <option value="16">গ্রেড ১৬</option>
+            <option value="17">গ্রেড ১৭</option>
+            <option value="18">গ্রেড ১৮</option>
+            <option value="19">গ্রেড ১৯</option>
+            <option value="20">গ্রেড ২০</option>
+          </select>
+          <label>গ্রেড নম্বর বেছে নিন</label>
+        </div>
+
+        <div class="fl-field" id="ff-cb">
+          <input type="number" id="currentBasic" placeholder=" " oninput="markVal('ff-cb');calcNextStep()">
+          <label>বর্তমান মূল বেতন (টাকা)</label>
+        </div>
+      </div>
+
+      <div class="g3">
+        <div class="fl-field" id="ff-cgp">
+          <input type="number" id="currentGradePay" placeholder=" " oninput="markVal('ff-cgp');calcNextStep()">
+          <label>বর্তমান (২০১৫) গ্রেডের ১ম ধাপ</label>
+          <div class="note">২০১৫ স্কেলে গ্রেডের সর্বনিম্ন/১ম ধাপ</div>
+        </div>
+        <div class="fl-field" id="ff-ngp">
+          <input type="number" id="newGradePay" placeholder=" " readonly oninput="markVal('ff-ngp');calcNextStep()">
+          <label>শুরুর ধাপ (২০২৬ স্কেল)</label>
+          <div class="note">Excel-এর "নতুন স্কেল" কলাম থেকে স্বয়ংক্রিয়</div>
+        </div>
+        <div class="fl-field" id="ff-ns">
+          <input type="number" id="nextStep" placeholder=" " readonly>
+          <label>নতুন স্কেলে উচ্চতর ধাপ</label>
+          <div class="note" id="nextStepNote">স্বয়ংক্রিয়: (মূল বেতন − ২০১৫ ধাপ) + ২০২৬ ধাপ</div>
+        </div>
+      </div>
+
+      <!-- Toggle: Special Allowance -->
+      <div style="margin-top:22px;display:flex;flex-direction:column;gap:12px">
+
+        <div class="toggle-row" id="togSA" onclick="toggleSA()">
+          <label class="sw" onclick="event.stopPropagation()">
+            <input type="checkbox" id="chkSA" onchange="toggleSA()">
+            <div class="sw-track"></div>
+            <div class="sw-knob"></div>
+          </label>
+          <div class="toggle-label">
+            <div class="toggle-label-title">বিশেষ ভাতা অন্তর্ভুক্ত করুন</div>
+            <div class="toggle-label-sub">টিক দিলে বিশেষ ভাতার পরিমাণ ইনপুট করুন</div>
+          </div>
+        </div>
+
+        <div class="toggle-field" id="fieldSA" style="display:none">
+          <div class="fl-field" id="ff-sa" style="max-width:320px">
+            <input type="number" id="specialAllowance" placeholder=" " value="" oninput="markVal('ff-sa')">
+            <label>বিশেষ ভাতার পরিমাণ (টাকা)</label>
+          </div>
+        </div>
+
+        <!-- Toggle: Increment Rate -->
+        <div class="toggle-row" id="togIR" onclick="toggleIR()">
+          <label class="sw" onclick="event.stopPropagation()">
+            <input type="checkbox" id="chkIR" onchange="toggleIR()">
+            <div class="sw-track"></div>
+            <div class="sw-knob"></div>
+          </label>
+          <div class="toggle-label">
+            <div class="toggle-label-title">কাস্টম ইনক্রিমেন্ট হার যুক্ত করুন</div>
+            <div class="toggle-label-sub">বন্ধ থাকলে ডিফল্ট ৫% ব্যবহার হবে</div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap">ডিফল্ট: ৫%</div>
+        </div>
+
+        <div class="toggle-field" id="fieldIR" style="display:none">
+          <div class="fl-field" id="ff-ir" style="max-width:320px">
+            <input type="number" id="incrRate" placeholder=" " value="5" min="1" max="30" oninput="markVal('ff-ir')">
+            <label>ইনক্রিমেন্ট হার (%)</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="err" id="errMsg">⚠️ গ্রেড, বর্তমান মূল বেতন, ২০১৫ ও ২০২৬ স্কেলের ১ম ধাপ পূরণ করুন। Excel আপলোড করলে ২০২৬ ধাপ স্বয়ংক্রিয় আসবে।</div>
+
+      <div class="btn-row">
+        <button class="primary" onclick="calculate()">⚙️ বেতন নির্ধারণ করুন</button>
+        <button class="ghost" onclick="resetAll()">↺ রিসেট</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result">
+    <div class="res-card">
+      <div class="res-hdr">
+        <div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);margin-bottom:3px;letter-spacing:1px;text-transform:uppercase">বেতন ফিক্সেশন রিপোর্ট</div>
+          <h2>নির্ধারণ বিবরণী</h2>
+          <div class="res-hdr-meta" id="resGradeLabel"></div>
+          <div id="resPersonalInfo" style="margin-top:8px;font-size:12px;color:rgba(255,255,255,.75);line-height:1.8;display:none"></div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <div class="stamp">প্রস্তাবিত</div>
+          <button class="prt-btn" onclick="printResult()">🖨️ প্রিন্ট</button>
+          <button class="prt-btn" onclick="downloadExcel()" style="background:rgba(39,174,96,.35);border-color:rgba(39,174,96,.5)">⬇️ এক্সেল ডাউনলোড</button>
+        </div>
+      </div>
+
+      <ul class="step-list" id="stepList"></ul>
+      <div class="fin" id="finBox"></div>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+// ─── Grade Data Store ───
+// Default fallback data (20 grades - Bangladesh pay scale approximation)
+const defaultGrades = {
+  1:  {newPay:86000, nextStep:88500, specialAllow:0},
+  2:  {newPay:66000, nextStep:68000, specialAllow:0},
+  3:  {newPay:56500, nextStep:58000, specialAllow:0},
+  4:  {newPay:50000, nextStep:51500, specialAllow:0},
+  5:  {newPay:43000, nextStep:44200, specialAllow:0},
+  6:  {newPay:35500, nextStep:36600, specialAllow:0},
+  7:  {newPay:29000, nextStep:29900, specialAllow:0},
+  8:  {newPay:23000, nextStep:23700, specialAllow:0},
+  9:  {newPay:22000, nextStep:22700, specialAllow:0},
+  10: {newPay:16000, nextStep:16500, specialAllow:5256},
+  11: {newPay:12500, nextStep:12900, specialAllow:0},
+  12: {newPay:11300, nextStep:11650, specialAllow:0},
+  13: {newPay:11000, nextStep:11330, specialAllow:0},
+  14: {newPay:10200, nextStep:10510, specialAllow:0},
+  15: {newPay:9700,  nextStep:9990,  specialAllow:0},
+  16: {newPay:9300,  nextStep:9580,  specialAllow:0},
+  17: {newPay:9000,  nextStep:9270,  specialAllow:0},
+  18: {newPay:8800,  nextStep:9065,  specialAllow:0},
+  19: {newPay:8500,  nextStep:8755,  specialAllow:0},
+  20: {newPay:8250,  nextStep:8498,  specialAllow:0},
+};
+
+// Current scale defaults
+const currentScale = {
+  1:{pay:78000},2:{pay:56500},3:{pay:50000},4:{pay:43000},5:{pay:36500},
+  6:{pay:29000},7:{pay:23000},8:{pay:16000},9:{pay:15000},10:{pay:11000},
+  11:{pay:9700},12:{pay:9300},13:{pay:9000},14:{pay:8800},15:{pay:8500},
+  16:{pay:8250},17:{pay:8000},18:{pay:8000},19:{pay:8000},20:{pay:8000},
+};
+
+let uploadedGrades = {}; // filled by Excel
+let useUploaded = false;
+
+function getGradeData(g){
+  if(useUploaded && uploadedGrades[g]) return uploadedGrades[g];
+  return defaultGrades[g] || null;
+}
+
+// ─── Toggle helpers ───
+function toggleSA(){
+  const chk = document.getElementById('chkSA');
+  const field = document.getElementById('fieldSA');
+  const row = document.getElementById('togSA');
+  // sync checkbox
+  if(event && event.target !== chk) chk.checked = !chk.checked;
+  field.style.display = chk.checked ? 'block' : 'none';
+  row.classList.toggle('active', chk.checked);
+}
+function toggleIR(){
+  const chk = document.getElementById('chkIR');
+  const field = document.getElementById('fieldIR');
+  const row = document.getElementById('togIR');
+  if(event && event.target !== chk) chk.checked = !chk.checked;
+  field.style.display = chk.checked ? 'block' : 'none';
+  row.classList.toggle('active', chk.checked);
+}
+
+// ─── Floating label state ───
+function markVal(id){
+  const el = document.getElementById(id);
+  const inp = el.querySelector('input,select');
+  if(inp && (inp.value !== '' && inp.value !== ' ')) el.classList.add('has-val');
+  else el.classList.remove('has-val');
+}
+
+// init select floating label
+document.getElementById('grade').addEventListener('change', function(){
+  const ff = document.getElementById('ff-grade');
+  ff.classList.toggle('has-val', this.value !== '');
+});
+
+// ─── Grade change ───
+function onGradeChange(){
+  const g = +document.getElementById('grade').value;
+  if(!g) return;
+
+  // 2015 স্কেল: গ্রেডের ১ম ধাপ
+  const cs = currentScale[g];
+  if(cs){ document.getElementById('currentGradePay').value = cs.pay; markVal('ff-cgp'); }
+
+  // 2026 স্কেল: Excel "নতুন স্কেল" কলামের মান (newPay) → শুরুর ধাপ
+  const nd = getGradeData(g);
+  if(nd){
+    document.getElementById('newGradePay').value = nd.newPay;
+    markVal('ff-ngp');
+    if(nd.specialAllow && nd.specialAllow > 0){
+      document.getElementById('chkSA').checked = true;
+      document.getElementById('fieldSA').style.display = 'block';
+      document.getElementById('togSA').classList.add('active');
+      document.getElementById('specialAllowance').value = nd.specialAllow;
+      markVal('ff-sa');
+    } else {
+      document.getElementById('chkSA').checked = false;
+      document.getElementById('fieldSA').style.display = 'none';
+      document.getElementById('togSA').classList.remove('active');
+      document.getElementById('specialAllowance').value = '';
+    }
+  }
+  calcNextStep();
+}
+
+// ─── nextStep স্বয়ংক্রিয় গণনা: (মূল বেতন − ২০১৫ ১ম ধাপ) + ২০২৬ ১ম ধাপ ───
+function calcNextStep(){
+  const cb  = +document.getElementById('currentBasic').value    || 0;
+  const cg  = +document.getElementById('currentGradePay').value || 0;
+  const ng  = +document.getElementById('newGradePay').value     || 0;
+  if(cb > 0 && cg > 0 && ng > 0){
+    const computed = ng + (cb - cg);
+    document.getElementById('nextStep').value = computed;
+    markVal('ff-ns');
+    document.getElementById('nextStepNote').textContent =
+      `(${cb.toLocaleString()} − ${cg.toLocaleString()}) + ${ng.toLocaleString()} = ${computed.toLocaleString()}`;
+  } else {
+    document.getElementById('nextStep').value = '';
+    document.getElementById('ff-ns').classList.remove('has-val');
+    document.getElementById('nextStepNote').textContent = 'স্বয়ংক্রিয়: (মূল বেতন − ২০১৫ ধাপ) + ২০২৬ ধাপ';
+  }
+}
+
+// ─── Excel Upload ───
+function handleFile(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const wb = XLSX.read(e.target.result, {type:'array'});
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      parseGradeRows(rows, file.name);
+    } catch(err){
+      alert('ফাইল পড়তে সমস্যা হয়েছে: ' + err.message);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseGradeRows(rows, fname){
+  // Find header row containing গ্রেড/grade
+  let headerIdx = -1;
+  for(let i=0;i<rows.length;i++){
+    const r = rows[i].map(c=>String(c).trim().toLowerCase());
+    if(r.some(c=>c.includes('গ্রেড')||c.includes('grade'))){
+      headerIdx = i; break;
+    }
+  }
+  if(headerIdx < 0) headerIdx = 0;
+  const dataRows = rows.slice(headerIdx+1);
+
+  // Column layout: col0=গ্রেড, col1=নতুন স্কেল, col2..col19=ধাপ-১..ধাপ-১৮
+  // nextStep = first non-empty step value (ধাপ-১ = col2)
+  // specialAllow: not in this format — keep 0 unless separately set
+  const parsed = {};
+  let count = 0;
+  for(const row of dataRows){
+    if(!row.length) continue;
+    const g = parseInt(String(row[0]).replace(/[^\d]/g,''));
+    if(isNaN(g)||g<1||g>20) continue;
+
+    const newPay = parseFloat(String(row[1]||'').replace(/,/g,'')) || 0;
+    if(!newPay) continue;
+
+    // Collect all 18 steps (cols 2–19)
+    const stepArr = [];
+    for(let c=2; c<=19; c++){
+      const v = parseFloat(String(row[c]||'').replace(/,/g,''));
+      if(v > 0) stepArr.push(v);
+    }
+
+    // nextStep = ধাপ-১ (first step); fallback to newPay if missing
+    const nextStep = stepArr.length > 0 ? stepArr[0] : newPay;
+
+    // Keep existing specialAllow if already set from a previous upload/default
+    const existingSA = (uploadedGrades[g] && uploadedGrades[g].specialAllow) ||
+                       (defaultGrades[g] && defaultGrades[g].specialAllow) || 0;
+
+    parsed[g] = { newPay, nextStep, steps: stepArr, specialAllow: existingSA };
+    count++;
+  }
+  if(count === 0){
+    alert('কোনো বৈধ গ্রেড ডেটা পাওয়া যায়নি। টেমপ্লেট ফরম্যাট দেখুন।');
+    return;
+  }
+  uploadedGrades = parsed;
+  useUploaded = true;
+  showUploadSuccess(fname, count);
+  renderGradeTable(parsed);
+  // refresh current grade if selected
+  const g = +document.getElementById('grade').value;
+  if(g) onGradeChange();
+}
+
+function showUploadSuccess(fname, count){
+  const el = document.getElementById('uploadSuccess');
+  document.getElementById('uploadMsg').textContent = `"${fname}" থেকে ${count}টি গ্রেড লোড হয়েছে`;
+  el.classList.add('show');
+}
+
+function clearUpload(){
+  uploadedGrades = {};
+  useUploaded = false;
+  document.getElementById('uploadSuccess').classList.remove('show');
+  document.getElementById('gradeTableWrap').classList.remove('show');
+  document.getElementById('xlsxFile').value = '';
+  // refresh
+  const g = +document.getElementById('grade').value;
+  if(g) onGradeChange();
+}
+
+function renderGradeTable(data){
+  const body = document.getElementById('gradeTableBody');
+  const keys = Object.keys(data).sort((a,b)=>+a-+b);
+  body.innerHTML = keys.map(k=>{
+    const d = data[k];
+    const stepCells = Array.from({length:18}, (_,i)=>{
+      const v = d.steps && d.steps[i];
+      return `<td>${v ? fmt(v) : '—'}</td>`;
+    }).join('');
+    return `<tr>
+      <td><strong>গ্রেড ${k}</strong></td>
+      <td>${fmt(d.newPay)}</td>
+      ${stepCells}
+    </tr>`;
+  }).join('');
+  document.getElementById('gradeTableWrap').classList.add('show');
+}
+
+// ─── Template download ───
+function downloadTemplate(){
+  const wb = XLSX.utils.book_new();
+  const stepHeaders = Array.from({length:18},(_,i)=>`ধাপ-${i+1}`);
+  const header = ['গ্রেড', 'নতুন স্কেল', ...stepHeaders];
+  const rows = [header];
+  for(let i=1;i<=20;i++){
+    const d = defaultGrades[i];
+    // Generate 18 steps from nextStep with ~5% increment
+    const stepVals = [];
+    let prev = d.nextStep;
+    for(let s=0;s<18;s++){
+      stepVals.push(prev);
+      prev = Math.round(prev * 1.05 / 10) * 10;
+    }
+    rows.push([i, d.newPay, ...stepVals]);
+  }
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  const cols = [{wch:8},{wch:14},...Array(18).fill({wch:12})];
+  ws['!cols'] = cols;
+  XLSX.utils.book_append_sheet(wb, ws, 'প্রস্তাবিত স্কেল');
+  XLSX.writeFile(wb, 'proposed_scale_template.xlsx');
+}
+
+// ─── Drag-drop ───
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e=>{e.preventDefault();dz.classList.add('drag')});
+dz.addEventListener('dragleave', ()=>dz.classList.remove('drag'));
+dz.addEventListener('drop', e=>{
+  e.preventDefault();dz.classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if(f) handleFile(f);
+});
+
+
+// ─── Excel Download ───
+function downloadExcel(){
+  const stepListEl = document.getElementById('stepList');
+  const finBoxEl   = document.getElementById('finBox');
+  if(!stepListEl || !finBoxEl){ alert('প্রথমে বেতন নির্ধারণ করুন।'); return; }
+
+  // ব্যক্তিগত তথ্য সংগ্রহ
+  const pName      = document.getElementById('pName').value.trim()      || '—';
+  const pDesig     = document.getElementById('pDesig').value.trim()     || '—';
+  const pJoinDate  = document.getElementById('pJoinDate').value         || '—';
+  const pJoinDesig = document.getElementById('pJoinDesig').value.trim() || '—';
+  const pWorkplace = document.getElementById('pWorkplace').value.trim() || '—';
+  const pNID       = document.getElementById('pNID').value.trim()       || '—';
+  const pMobile    = document.getElementById('pMobile').value.trim()    || '—';
+  const pPF        = document.getElementById('pPF').value.trim()        || '—';
+  const gradeLabel = document.getElementById('resGradeLabel').textContent || '';
+
+  // বেতন ইনপুট মান
+  const grade        = document.getElementById('grade').value;
+  const currentBasic = parseFloat(document.getElementById('currentBasic').value)||0;
+  const currentGP    = parseFloat(document.getElementById('currentGradePay').value)||0;
+  const newGP        = parseFloat(document.getElementById('newGradePay').value)||0;
+  const nextStep     = parseFloat(document.getElementById('nextStep').value)||0;
+
+  // Step items থেকে ডেটা বের করা
+  const stepItems = stepListEl.querySelectorAll('.step-item');
+  const steps = [];
+  stepItems.forEach(item => {
+    const lbl = item.querySelector('.step-lbl')?.textContent || '';
+    const val = item.querySelector('.step-val')?.childNodes[0]?.textContent?.trim() || '';
+    const frm = item.querySelector('.formula')?.textContent || '';
+    steps.push({ lbl, val, frm });
+  });
+
+  // Final values from fin box
+  const finAmtEl   = finBoxEl.querySelector('.fin-amt');
+  const finGainEl  = finBoxEl.querySelector('.fin-gain-val');
+  const finalBasic = finAmtEl ? finAmtEl.childNodes[0]?.textContent?.trim() : '';
+  const gainAmt    = finGainEl ? finGainEl.textContent?.trim() : '';
+
+  // ─── Excel XML তৈরি ───
+  const B = (v) => `<Cell ss:StyleID="B"><Data ss:Type="String">${v}</Data></Cell>`;
+  const N = (v,s='') => `<Cell${s?' ss:StyleID="'+s+'"':''}>` +
+            `<Data ss:Type="Number">${String(v).replace(/[^\d.\-]/g,'')}</Data></Cell>`;
+  const S = (v,s='') => `<Cell${s?' ss:StyleID="'+s+'"':''}>` +
+            `<Data ss:Type="String">${v}</Data></Cell>`;
+  const H = (v) => `<Cell ss:StyleID="H"><Data ss:Type="String">${v}</Data></Cell>`;
+  const G = (v) => `<Cell ss:StyleID="G"><Data ss:Type="String">${v}</Data></Cell>`;
+  const FIN = (v) => `<Cell ss:StyleID="FIN"><Data ss:Type="String">${v}</Data></Cell>`;
+  const FINY = (v) => `<Cell ss:StyleID="FINY"><Data ss:Type="String">${v}</Data></Cell>`;
+  const MERGE = (v,c,s) => `<Cell ss:MergeAcross="${c}" ss:StyleID="${s}"><Data ss:Type="String">${v}</Data></Cell>`;
+
+  const stepsRows = steps.map((st, i) => `
+    <Row ss:Height="22">
+      ${S(i+1,'SN')}
+      ${S(st.lbl,'SL')}
+      ${S(st.val,'SV')}
+      ${S(st.frm,'SF')}
+    </Row>`).join('');
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:x="urn:schemas-microsoft-com:office:excel">
+<Styles>
+  <Style ss:ID="Default"><Font ss:FontName="Hind Siliguri" ss:Size="11"/></Style>
+  <Style ss:ID="TITLE">
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="14" ss:Bold="1" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#0E4226" ss:Pattern="Solid"/>
+    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="2" ss:Color="#FFFFFF"/></Borders>
+  </Style>
+  <Style ss:ID="SUB">
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#1A6B3C" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="PH">
+    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#145A32" ss:Pattern="Solid"/>
+    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#27AE60"/></Borders>
+  </Style>
+  <Style ss:ID="PK">
+    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Bold="1" ss:Color="#555555"/>
+    <Interior ss:Color="#F5F5F0" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="PV">
+    <Alignment ss:Horizontal="Left" ss:Vertical="Center" ss:WrapText="1"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Color="#0E4226"/>
+    <Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/>
+    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#E0E0E0"/></Borders>
+  </Style>
+  <Style ss:ID="H">
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Bold="1" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#0E4226" ss:Pattern="Solid"/>
+    <Borders>
+      <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#27AE60"/>
+      <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#27AE60"/>
+    </Borders>
+  </Style>
+  <Style ss:ID="SN">
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#1A6B3C" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="SL">
+    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="10" ss:Color="#333333"/>
+    <Interior ss:Color="#FFFFFF" ss:Pattern="Solid"/>
+    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#EEEEEE"/></Borders>
+  </Style>
+  <Style ss:ID="SV">
+    <Alignment ss:Horizontal="Right" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="11" ss:Bold="1" ss:Color="#0E4226"/>
+    <Interior ss:Color="#F0FAF4" ss:Pattern="Solid"/>
+    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#EEEEEE"/></Borders>
+  </Style>
+  <Style ss:ID="SF">
+    <Alignment ss:Horizontal="Left" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="9" ss:Italic="1" ss:Color="#888888"/>
+    <Interior ss:Color="#FAFAFA" ss:Pattern="Solid"/>
+    <Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1" ss:Color="#EEEEEE"/></Borders>
+  </Style>
+  <Style ss:ID="FIN">
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="13" ss:Bold="1" ss:Color="#FFFFFF"/>
+    <Interior ss:Color="#0E4226" ss:Pattern="Solid"/>
+  </Style>
+  <Style ss:ID="FINY">
+    <Alignment ss:Horizontal="Center" ss:Vertical="Center"/>
+    <Font ss:FontName="Hind Siliguri" ss:Size="14" ss:Bold="1" ss:Color="#F0D878"/>
+    <Interior ss:Color="#0E4226" ss:Pattern="Solid"/>
+  </Style>
+</Styles>
+<Worksheet ss:Name="বেতন নির্ধারণ">
+<Table ss:DefaultColumnWidth="120">
+  <Column ss:Width="30"/>
+  <Column ss:Width="200"/>
+  <Column ss:Width="130"/>
+  <Column ss:Width="250"/>
+  <Row ss:Height="36">
+    <Cell ss:MergeAcross="3" ss:StyleID="TITLE"><Data ss:Type="String">বেতন নির্ধারণ বিবরণী — প্রস্তাবিত বেতন স্কেল ২০২৬</Data></Cell>
+  </Row>
+  <Row ss:Height="20">
+    <Cell ss:MergeAcross="3" ss:StyleID="SUB"><Data ss:Type="String">${gradeLabel}</Data></Cell>
+  </Row>
+  <Row ss:Height="6"><Cell/></Row>
+  <Row ss:Height="22">
+    <Cell ss:MergeAcross="3" ss:StyleID="PH"><Data ss:Type="String">👤 ব্যক্তিগত তথ্য</Data></Cell>
+  </Row>
+  <Row ss:Height="20">${S('নাম','PK')}${S(pName,'PV')}${S('পদবী','PK')}${S(pDesig,'PV')}</Row>
+  <Row ss:Height="20">${S('যোগদানের তারিখ','PK')}${S(pJoinDate,'PV')}${S('যোগদানকালীন পদবী','PK')}${S(pJoinDesig,'PV')}</Row>
+  <Row ss:Height="20">${S('বর্তমান কর্মস্থল','PK')}${S(pWorkplace,'PV')}${S('পিএফ নম্বর','PK')}${S(pPF,'PV')}</Row>
+  <Row ss:Height="20">${S('NID নম্বর','PK')}${S(pNID,'PV')}${S('মোবাইল নম্বর','PK')}${S(pMobile,'PV')}</Row>
+  <Row ss:Height="6"><Cell/></Row>
+  <Row ss:Height="22">
+    ${H('ক্র.')}${H('বিবরণ')}${H('পরিমাণ (টাকা)')}${H('সূত্র / নোট')}
+  </Row>
+  ${stepsRows}
+  <Row ss:Height="6"><Cell/></Row>
+  <Row ss:Height="30">
+    <Cell ss:MergeAcross="1" ss:StyleID="FIN"><Data ss:Type="String">✅ চূড়ান্ত মূল বেতন (জুলাই ২০২৬)</Data></Cell>
+    <Cell ss:StyleID="FINY"><Data ss:Type="String">${finalBasic} টাকা</Data></Cell>
+    <Cell ss:StyleID="FIN"><Data ss:Type="String">মাসিক বেতন বৃদ্ধি: ${gainAmt} টাকা</Data></Cell>
+  </Row>
+  <Row ss:Height="6"><Cell/></Row>
+  <Row ss:Height="18">
+    <Cell ss:MergeAcross="3" ss:StyleID="SUB"><Data ss:Type="String">প্রস্তুত: বেতন নির্ধারণ জেনারেটর | বাংলাদেশ কৃষি ব্যাংক</Data></Cell>
+  </Row>
+</Table>
+</Worksheet>
+</Workbook>`;
+
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + xml], {type:'application/vnd.ms-excel;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  const nm = pName !== '—' ? pName : 'কর্মকর্তা';
+  a.download = `বেতন_নির্ধারণ_${nm}_গ্রেড${grade}.xls`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Print ───
+function printResult(){
+  const stepListEl = document.getElementById('stepList');
+  const finBoxEl   = document.getElementById('finBox');
+  if(!stepListEl || !finBoxEl){ alert('প্রথমে বেতন নির্ধারণ করুন।'); return; }
+
+  const gradeLabel = document.getElementById('resGradeLabel').textContent;
+  const piHtml     = document.getElementById('resPersonalInfo').innerHTML;
+  const stepHtml   = stepListEl.innerHTML;
+  const finHtml    = finBoxEl.innerHTML;
+
+  // Build a hidden iframe — no popup blocker issue
+  let iframe = document.getElementById('__printFrame');
+  if(iframe) iframe.remove();
+  iframe = document.createElement('iframe');
+  iframe.id = '__printFrame';
+  iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:800px;height:600px;border:none';
+  document.body.appendChild(iframe);
+
+  const css = `
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:"Hind Siliguri",sans-serif;background:#fff;padding:20px;color:#1a1a1a;font-size:13px}
+    .res-hdr{background:linear-gradient(135deg,#0e4226,#1a6b3c);padding:16px 22px;border-radius:10px 10px 0 0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .res-hdr h2{font-size:17px;font-weight:700;color:#fff}
+    .res-hdr-meta{font-size:12px;color:rgba(255,255,255,.75);margin-top:3px}
+    #pi{font-size:11px;color:rgba(255,255,255,.8);margin-top:6px;line-height:1.8}
+    .stamp{float:right;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);padding:2px 10px;border-radius:50px;font-size:10px;color:#fff;letter-spacing:1px}
+    ul{list-style:none;padding:0;border:1px solid #ddd;border-top:none}
+    .step-item{display:flex;align-items:flex-start;gap:10px;padding:10px 16px;border-bottom:1px solid #f0ebe0}
+    .step-item:last-child{border-bottom:none}
+    .step-num{min-width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#0e4226,#1a6b3c);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .step-content{flex:1}
+    .step-lbl{font-size:10px;color:#666;margin-bottom:1px}
+    .step-val{font-size:14px;font-weight:700;color:#0e4226}
+    .formula{font-size:9px;color:#888;margin-left:5px}
+    .hi{background:#e6f4ee!important;border-left:4px solid #1a6b3c;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .hi .step-val{color:#27ae60}
+    .wo{background:#fff8e6!important;border-left:4px solid #e8c843;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .wo .step-val{color:#9a7200}
+    .tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:4px;font-weight:700;margin-left:4px}
+    .tok{background:#d1f5e0;color:#145a32;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .twarn{background:#fff3cd;color:#856404;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .fin{background:linear-gradient(135deg,#0e4226,#1a6b3c);border-radius:0 0 10px 10px;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .fin-lbl{font-size:11px;color:rgba(255,255,255,.75);margin-bottom:3px}
+    .fin-amt{font-size:24px;font-weight:700;color:#fff}
+    .fin-amt span{font-size:13px;color:rgba(255,255,255,.7);font-weight:500}
+    .fin-gain{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:10px;padding:10px 16px;text-align:right}
+    .fin-gain-lbl{font-size:10px;color:rgba(255,255,255,.65);margin-bottom:2px}
+    .fin-gain-val{font-size:18px;font-weight:700;color:#f0d878}
+    .fin-note{font-size:9px;color:rgba(255,255,255,.5);margin-top:2px}
+  `;
+
+  const doc = iframe.contentDocument || iframe.contentWindow.document;
+  doc.open();
+  doc.write(`<!DOCTYPE html><html lang="bn"><head><meta charset="UTF-8">
+<title>বেতন নির্ধারণ রিপোর্ট</title>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap" rel="stylesheet">
+<style>${css}</style></head><body>
+<div class="res-hdr">
+  <span class="stamp">প্রস্তাবিত</span>
+  <div style="font-size:9px;color:rgba(255,255,255,.6);letter-spacing:1px;text-transform:uppercase">বেতন ফিক্সেশন রিপোর্ট</div>
+  <h2>নির্ধারণ বিবরণী</h2>
+  <div class="res-hdr-meta">${gradeLabel}</div>
+  <div id="pi">${piHtml}</div>
+</div>
+<ul>${stepHtml}</ul>
+<div class="fin">${finHtml}</div>
+</body></html>`);
+  doc.close();
+
+  // Wait for font to load then print
+  setTimeout(function(){
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }, 800);
+}
+// ─── Format ───
+function fmt(n){ return Math.round(n).toLocaleString('bn-BD') }
+function fmtNum(n){ return Math.round(n).toLocaleString() }
+
+// ─── Calculate ───
+function calculate(){
+  const grade        = +document.getElementById('grade').value;
+  const currentBasic = +document.getElementById('currentBasic').value;
+  const currStep1    = +document.getElementById('currentGradePay').value;  // 2015 ১ম ধাপ
+  const newStep1     = +document.getElementById('newGradePay').value;      // 2026 ১ম ধাপ
+  const nextStep     = +document.getElementById('nextStep').value;          // (cb−cg)+ng
+  const useSA  = document.getElementById('chkSA').checked;
+  const specialAllow = useSA ? (+document.getElementById('specialAllowance').value || 0) : 0;
+  const useIR  = document.getElementById('chkIR').checked;
+  const incrRate = useIR ? (+document.getElementById('incrRate').value || 5) : 5;
+  const errEl = document.getElementById('errMsg');
+
+  if(!grade || !currentBasic || !currStep1 || !newStep1 || !nextStep){
+    errEl.style.display = 'block'; return;
+  }
+  errEl.style.display = 'none';
+
+  // ── গণনা ──
+  // nextStep ইতিমধ্যে = (currentBasic − currStep1) + newStep1
+  // কিন্তু নতুন স্কেলে ধাপে না পড়লে পরবর্তী উচ্চতর Excel-ধাপ নিতে হবে
+  // আপলোড করা steps থেকে nextStep-এর পরের ধাপ খুঁজব
+  const nd = getGradeData(grade);
+  let applicableStep = nextStep;
+  if(nd && nd.steps && nd.steps.length > 0){
+    // nextStep যদি কোনো Excel ধাপের সমান না হয়, উচ্চতর প্রথম ধাপে বসাও
+    const higherStep = nd.steps.find(s => s >= nextStep);
+    if(higherStep) applicableStep = higherStep;
+  }
+
+  const diff         = currentBasic - currStep1;
+  const rawNew       = newStep1 + diff;        // = nextStep (same formula)
+  const fitsStep     = rawNew === applicableStep || rawNew >= applicableStep;
+  const tentative    = applicableStep;          // সর্বদা Excel-ধাপে বসাও
+
+  const basicIncrease = tentative - currentBasic;
+  const fiftyPct     = basicIncrease * 0.5;
+  const julyBasic    = currentBasic + fiftyPct;
+  const annualIncr   = (tentative * incrRate) / 100;
+  const jul26Basic   = julyBasic + annualIncr;
+  const actualGain   = jul26Basic - currentBasic - specialAllow;
+
+  const gradeLabel = `গ্রেড ${grade}`;
+  document.getElementById('resGradeLabel').textContent =
+    `${gradeLabel} • বর্তমান মূল বেতন: ${fmt(currentBasic)} টাকা`;
+
+  // ── ব্যক্তিগত তথ্য রেন্ডার ──
+  const pName       = document.getElementById('pName').value.trim();
+  const pDesig      = document.getElementById('pDesig').value.trim();
+  const pJoinDate   = document.getElementById('pJoinDate').value;
+  const pJoinDesig  = document.getElementById('pJoinDesig').value.trim();
+  const pWorkplace  = document.getElementById('pWorkplace').value.trim();
+  const pNID        = document.getElementById('pNID').value.trim();
+  const pMobile     = document.getElementById('pMobile').value.trim();
+
+  const piEl = document.getElementById('resPersonalInfo');
+  const piParts = [];
+  if(pName)      piParts.push(`👤 <strong>${pName}</strong>`);
+  if(pDesig)     piParts.push(`পদবী: ${pDesig}`);
+  if(pJoinDate)  piParts.push(`যোগদান: ${pJoinDate}`);
+  if(pJoinDesig) piParts.push(`যোগদানকালীন পদবী: ${pJoinDesig}`);
+  if(pWorkplace) piParts.push(`কর্মস্থল: ${pWorkplace}`);
+  const pPF         = document.getElementById('pPF').value.trim();
+  if(pNID)       piParts.push(`NID: ${pNID}`);
+  if(pMobile)    piParts.push(`মোবাইল: ${pMobile}`);
+  if(pPF)        piParts.push(`পিএফ: ${pPF}`);
+  if(piParts.length > 0){
+    piEl.innerHTML = piParts.join(' &nbsp;|&nbsp; ');
+    piEl.style.display = 'block';
+  } else {
+    piEl.style.display = 'none';
+  }
+
+  // ── আউটপুট ধাপ (শুধু অন থাকা ধাপ দেখাবে) ──
+  const steps = [
+    {lbl:'২০১৫ স্কেলে গ্রেডের ১ম ধাপ',
+     val:`${fmt(currStep1)} টাকা`, frm:'বর্তমান গ্রেড পে', cls:''},
+    {lbl:'বর্তমান মূল বেতন',
+     val:`${fmt(currentBasic)} টাকা`, frm:'প্রদত্ত', cls:''},
+    {lbl:'পার্থক্য (মূল বেতন − ২০১৫ ১ম ধাপ)',
+     val:`${fmt(diff)} টাকা`,
+     frm:`(${fmtNum(currentBasic)} − ${fmtNum(currStep1)})`, cls:''},
+    {lbl:'২০২৬ স্কেলে নতুন স্কেল (শুরুর ধাপ)',
+     val:`${fmt(newStep1)} টাকা`, frm:'Excel "নতুন স্কেল" কলাম', cls:''},
+    {lbl:'নতুন স্কেলে প্রাপ্ত মান',
+     val:`${fmt(rawNew)} টাকা`,
+     frm:`(${fmtNum(newStep1)} + ${fmtNum(diff)})`,
+     cls: fitsStep ? 'hi' : 'wo',
+     tag: fitsStep
+       ? `<span class="tag tok">✓ ধাপে পড়েছে</span>`
+       : `<span class="tag twarn">⚠ ধাপে পড়েনি — পরবর্তী ধাপে</span>`
+    },
+    {lbl:'প্রযোজ্য উচ্চতর ধাপ (নতুন স্কেলে)',
+     val:`${fmt(tentative)} টাকা`,
+     frm: fitsStep ? 'সরাসরি ফিট' : `পরবর্তী ধাপ`,
+     cls:'hi'},
+    {lbl:'বর্ধিত মূল বেতন',
+     val:`${fmt(basicIncrease)} টাকা`,
+     frm:`(${fmtNum(tentative)} − ${fmtNum(currentBasic)})`, cls:''},
+    {lbl:'জুলাই মাসে প্রাপ্য বৃদ্ধি (৫০%)',
+     val:`${fmt(fiftyPct)} টাকা`,
+     frm:`${fmtNum(basicIncrease)} × ৫০%`, cls:''},
+    {lbl:'জুলাই মাসে কার্যকর মূল বেতন',
+     val:`${fmt(julyBasic)} টাকা`,
+     frm:`(${fmtNum(currentBasic)} + ${fmtNum(fiftyPct)})`, cls:'hi'},
+  ];
+
+  // ইনক্রিমেন্ট: শুধু অন থাকলে দেখাবে
+  if(useIR){
+    steps.push({
+      lbl:`বার্ষিক ইনক্রিমেন্ট (${incrRate}%)`,
+      val:`${fmt(annualIncr)} টাকা`,
+      frm:`${fmtNum(tentative)} × ${incrRate}÷১০০`, cls:''
+    });
+    steps.push({
+      lbl:"জুলাই '২৬ চূড়ান্ত মূল বেতন",
+      val:`${fmt(jul26Basic)} টাকা`,
+      frm:`(${fmtNum(julyBasic)} + ${fmtNum(annualIncr)})`, cls:'hi'
+    });
+  }
+
+  // বিশেষ ভাতা: শুধু অন ও > 0 হলে দেখাবে
+  if(useSA && specialAllow > 0){
+    steps.push({
+      lbl:'বিশেষ ভাতা (বিয়োগ)',
+      val:`− ${fmt(specialAllow)} টাকা`, frm:'গণনা থেকে বাদ', cls:'wo'
+    });
+  }
+
+  const finalBasic = useIR ? jul26Basic : julyBasic;
+  const finalGain  = finalBasic - currentBasic - specialAllow;
+
+  document.getElementById('stepList').innerHTML = steps.map((s,i)=>`
+    <li class="step-item ${s.cls||''}">
+      <div class="step-num">${i+1}</div>
+      <div class="step-content">
+        <div class="step-lbl">${s.lbl}</div>
+        <div class="step-val">${s.val}<span class="formula">${s.frm}</span>${s.tag||''}</div>
+      </div>
+    </li>`).join('');
+
+  const gainNote = useSA && specialAllow > 0
+    ? `(${fmtNum(finalBasic)} − ${fmtNum(currentBasic)} − ${fmtNum(specialAllow)})`
+    : `(${fmtNum(finalBasic)} − ${fmtNum(currentBasic)})`;
+
+  const incrMeta = useIR ? ` • ইনক্রিমেন্ট: ${incrRate}%` : '';
+  const saMeta   = useSA && specialAllow > 0 ? ` • বিশেষ ভাতা: ${fmt(specialAllow)} টাকা` : '';
+
+  document.getElementById('finBox').innerHTML = `
+    <div>
+      <div class="fin-lbl">${useIR ? "জুলাই '২৬ ধার্যকৃত মূল বেতন" : "জুলাই মাসে কার্যকর মূল বেতন"}</div>
+      <div class="fin-amt">${fmt(finalBasic)} <span>টাকা</span></div>
+      <div style="font-size:11px;color:rgba(255,255,255,.55);margin-top:5px">
+        ${gradeLabel}${incrMeta}${saMeta}
+      </div>
+    </div>
+    <div class="fin-gain">
+      <div class="fin-gain-lbl">প্রকৃত বেতন বৃদ্ধি</div>
+      <div class="fin-gain-val">+ ${fmt(finalGain)} টাকা</div>
+      <div class="fin-note">${gainNote}</div>
+    </div>`;
+
+  const res = document.getElementById('result');
+  res.classList.add('show');
+  setTimeout(()=>res.scrollIntoView({behavior:'smooth',block:'start'}), 50);
+}
+
+// ─── Documentation Download ───
+function downloadDocumentation(){
+  const doc = `বেতন নির্ধারণ জেনারেটর — ব্যবহার নির্দেশিকা
+=====================================================
+প্রস্তাবিত বেতন স্কেল ২০২৬ | সংস্করণ ৩.০
+=====================================================
+
+এই সিস্টেমটি কী?
+-----------------
+বেতন নির্ধারণ জেনারেটর একটি স্বয়ংক্রিয় ওয়েব-ভিত্তিক টুল যা
+২০২৬ সালের প্রস্তাবিত নতুন বেতন স্কেল অনুযায়ী কর্মকর্তা/কর্মচারীর
+বেতন নির্ধারণ (Salary Fixation) হিসাব করে। কোনো ইন্টারনেট সংযোগ বা
+সার্ভার ছাড়াই সম্পূর্ণ ব্রাউজারে চলে।
+
+সিস্টেমে কয়টি সেকশন আছে?
+---------------------------
+১. প্রস্তাবিত স্কেল আপলোড (Excel)
+২. ব্যক্তিগত তথ্য
+৩. বর্তমান বেতন তথ্য
+৪. ফলাফল / নির্ধারণ বিবরণী
+
+
+সেকশন ১ — প্রস্তাবিত স্কেল আপলোড
+=====================================
+এই সেকশনে Excel ফাইলের মাধ্যমে নতুন বেতন স্কেলের ধাপসমূহ আপলোড করতে হয়।
+
+Excel ফাইলের কলাম বিন্যাস:
+  কলাম ১  : গ্রেড (১–২০)
+  কলাম ২  : নতুন স্কেল (গ্রেডের মূল মান)
+  কলাম ৩–২০: ধাপ-১ থেকে ধাপ-১৮ (প্রতিটি ৫% বৃদ্ধি সহ ধাপের মান)
+
+টেমপ্লেট পাওয়ার উপায়:
+  "টেমপ্লেট ডাউনলোড করুন" বোতামে ক্লিক করলে ডিফল্ট মান সহ
+  একটি Excel টেমপ্লেট ডাউনলোড হবে। এটি সম্পাদনা করে আপলোড দিন।
+
+আপলোড পদ্ধতি:
+  ১. ফাইল ড্রপ জোনে ড্র্যাগ করুন বা ক্লিক করে ফাইল নির্বাচন করুন।
+  ২. .xlsx / .xls / .csv সমর্থিত।
+  ৩. লোড সফল হলে সবুজ বার্তা ও নিচে টেবিল দেখাবে।
+  ৪. "✕" চিহ্নে ক্লিক করলে আপলোড বাতিল হবে।
+
+নোট: Excel আপলোড না করলেও ডিফল্ট প্রাক্কলিত মান দিয়ে কাজ করবে।
+
+
+সেকশন ২ — ব্যক্তিগত তথ্য
+============================
+এখানে কর্মকর্তা/কর্মচারীর ব্যক্তিগত তথ্য পূরণ করুন।
+এই তথ্যগুলো ফলাফলে ও প্রিন্টে প্রদর্শিত হবে।
+
+ইনপুট ক্ষেত্রসমূহ:
+  • কর্মকর্তা/কর্মচারীর নাম
+  • পদবী (বর্তমান)
+  • যোগদানের তারিখ
+  • যোগদানের তারিখে পদবী
+  • বর্তমান কর্মস্থল
+  • জাতীয় পরিচয়পত্র (NID) নম্বর
+  • মোবাইল নম্বর
+
+নোট: এই ক্ষেত্রগুলো পূরণ না করলেও বেতন গণনা হবে।
+
+
+সেকশন ৩ — বর্তমান বেতন তথ্য
+================================
+এখানে হিসাবের জন্য প্রয়োজনীয় বেতন তথ্য দিন।
+
+বাধ্যতামূলক ইনপুট:
+  ১. গ্রেড নম্বর     : ড্রপডাউন থেকে বেছে নিন (গ্রেড ১–২০)।
+                       বেছে নিলে ২০১৫ ও ২০২৬ স্কেলের ধাপ স্বয়ংক্রিয় বসবে।
+
+  ২. বর্তমান মূল বেতন: কর্মকর্তার বিদ্যমান মূল বেতন (টাকায়) লিখুন।
+
+  ৩. বর্তমান (২০১৫) গ্রেডের ১ম ধাপ:
+                       গ্রেড নির্বাচনে স্বয়ংক্রিয় আসে, প্রয়োজনে সম্পাদনা করুন।
+
+  ৪. শুরুর ধাপ (২০২৬ স্কেল):
+                       Excel আপলোড থেকে স্বয়ংক্রিয় আসে (ধাপ-১)।
+                       আপলোড না থাকলে ডিফল্ট মান বসবে।
+
+  ৫. নতুন স্কেলে উচ্চতর ধাপ:
+                       সূত্র: (বর্তমান মূল বেতন − ২০১৫ ১ম ধাপ) + ২০২৬ শুরুর ধাপ
+                       তিনটি মান পূরণ হলে স্বয়ংক্রিয় গণনা হয়।
+
+ঐচ্ছিক টগল:
+  • বিশেষ ভাতা অন্তর্ভুক্ত করুন:
+    টগল চালু করলে বিশেষ ভাতার পরিমাণ ইনপুট দেওয়া যাবে।
+    এটি চূড়ান্ত বেতন বৃদ্ধির হিসাব থেকে বাদ যাবে।
+
+  • কাস্টম ইনক্রিমেন্ট হার:
+    টগল বন্ধ থাকলে ডিফল্ট ৫% ইনক্রিমেন্ট ব্যবহার হবে।
+    চালু করলে কাস্টম হার দেওয়া যাবে।
+
+
+হিসাবের সূত্র (ধাপে ধাপে)
+============================
+ধাপ ১ : পার্থক্য = বর্তমান মূল বেতন − ২০১৫ গ্রেডের ১ম ধাপ
+ধাপ ২ : নতুন স্কেলে প্রাপ্ত মান = ২০২৬ শুরুর ধাপ + পার্থক্য
+ধাপ ৩ : Excel-এ আপলোড করা ধাপসমূহের মধ্যে প্রাপ্ত মানের সমান বা
+          উচ্চতর প্রথম ধাপটিকে "প্রযোজ্য উচ্চতর ধাপ" হিসেবে ধরা হয়।
+ধাপ ৪ : বর্ধিত মূল বেতন = প্রযোজ্য উচ্চতর ধাপ − বর্তমান মূল বেতন
+ধাপ ৫ : জুলাই মাসে প্রাপ্য বৃদ্ধি = বর্ধিত মূল বেতন × ৫০%
+ধাপ ৬ : জুলাই মাসে কার্যকর মূল বেতন = বর্তমান মূল বেতন + জুলাই বৃদ্ধি
+ধাপ ৭ : বার্ষিক ইনক্রিমেন্ট = প্রযোজ্য উচ্চতর ধাপ × ইনক্রিমেন্ট হার÷১০০
+ধাপ ৮ : জুলাই '২৬ চূড়ান্ত মূল বেতন = জুলাই মূল বেতন + বার্ষিক ইনক্রিমেন্ট
+ধাপ ৯ : প্রকৃত বেতন বৃদ্ধি = চূড়ান্ত মূল বেতন − বর্তমান মূল বেতন − বিশেষ ভাতা
+
+
+সেকশন ৪ — ফলাফল
+==================
+"⚙️ বেতন নির্ধারণ করুন" বোতামে ক্লিক করলে ফলাফল দেখাবে।
+
+ফলাফলে থাকে:
+  • কর্মকর্তার নাম ও ব্যক্তিগত তথ্য (যদি পূরণ করা থাকে)
+  • গ্রেড ও বর্তমান মূল বেতন
+  • ধাপে ধাপে গণনার বিস্তারিত বিবরণ
+  • চূড়ান্ত মূল বেতন ও প্রকৃত বেতন বৃদ্ধি
+
+রঙের অর্থ:
+  সবুজ হাইলাইট : গুরুত্বপূর্ণ ফলাফল
+  হলুদ হাইলাইট : সতর্কতা (যেমন: ধাপে পড়েনি)
+
+প্রিন্ট:
+  "🖨️ প্রিন্ট" বোতামে ক্লিক করলে শুধু ফলাফল অংশ প্রিন্ট হবে।
+  আপলোড জোন ও বাটনসমূহ প্রিন্টে আসবে না।
+
+রিসেট:
+  "↺ রিসেট" বোতামে সকল ইনপুট ও ফলাফল মুছে যাবে।
+
+
+প্রযুক্তিগত তথ্য
+==================
+  • সম্পূর্ণ অফলাইন / ব্রাউজার-ভিত্তিক (কোনো সার্ভার নেই)
+  • ব্যবহৃত লাইব্রেরি: SheetJS (xlsx.full.min.js) — Excel পড়ার জন্য
+  • ব্যবহৃত ফন্ট: Hind Siliguri (Google Fonts)
+  • ফাইলটি যেকোনো আধুনিক ব্রাউজারে চলবে (Chrome, Firefox, Edge, Safari)
+  • মোবাইল ডিভাইসেও সম্পূর্ণ কার্যকর (Responsive Design)
+
+
+যোগাযোগ ও সহায়তা
+==================
+এই টুলটি বাংলাদেশ কৃষি ব্যাংক (BKB) কর্মকর্তাদের জন্য তৈরি।
+কোনো সমস্যা বা পরামর্শের জন্য আপনার আইটি বিভাগে যোগাযোগ করুন।
+
+=====================================================
+বেতন নির্ধারণ জেনারেটর | প্রস্তাবিত বেতন স্কেল ২০২৬
+সংস্করণ ৩.০ | সর্বস্বত্ব সংরক্ষিত
+=====================================================
+`;
+  const blob = new Blob([doc], {type:'text/plain;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url;
+  a.download = 'বেতন_নির্ধারণ_জেনারেটর_নির্দেশিকা.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Reset ───
+function resetAll(){
+  ['currentBasic','currentGradePay','newGradePay','nextStep','specialAllowance','incrRate',
+   'pName','pDesig','pJoinDate','pJoinDesig','pWorkplace','pNID','pMobile','pPF'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = id==='incrRate' ? '5' : '';
+  });
+  ['ff-grade','ff-cb','ff-cgp','ff-ngp','ff-ns','ff-sa','ff-ir',
+   'ff-pname','ff-pdesig','ff-pjoin','ff-pjoindesig','ff-pwork','ff-pnid','ff-pmobile','ff-ppf'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.remove('has-val');
+  });
+  document.getElementById('grade').value = '';
+  document.getElementById('chkSA').checked = false;
+  document.getElementById('chkIR').checked = false;
+  document.getElementById('fieldSA').style.display = 'none';
+  document.getElementById('fieldIR').style.display = 'none';
+  document.getElementById('togSA').classList.remove('active');
+  document.getElementById('togIR').classList.remove('active');
+  document.getElementById('result').classList.remove('show');
+  document.getElementById('errMsg').style.display = 'none';
+  document.getElementById('nextStepNote').textContent = 'স্বয়ংক্রিয়: (মূল বেতন − ২০১৫ ধাপ) + ২০২৬ ধাপ';
+}
+</script>
+</body>
+</html>
