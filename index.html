@@ -16,6 +16,67 @@
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
   box-sizing:border-box;
 }
+/* ============ মোবাইল রেসপনসিভ ============ */
+@media (max-width: 680px){
+  .wrap{ padding: 10px 6px 60px; }
+  .modeswitch{ flex-direction: column; gap: 6px; }
+  .modeswitch label{ min-width: unset; width: 100%; text-align: center; }
+  .input-tbl-wrap table{ min-width: unset !important; width: 100%; }
+  .input-tbl-wrap td.label{
+    display: block; width: 100%; padding: 8px 6px 2px;
+    font-weight: 600; white-space: normal; border-bottom: none;
+    background: var(--accent-bg); color: var(--accent-text);
+    font-size: .82rem; border-radius: 6px 6px 0 0;
+  }
+  .input-tbl-wrap td.cell{
+    display: block; width: 100%; padding: 2px 6px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .input-tbl-wrap td.cell input,
+  .input-tbl-wrap td.cell select{ width: 100% !important; box-sizing: border-box; font-size: .95rem; padding: 9px 10px; }
+  .input-tbl-wrap tr{ display: block; margin-bottom: 4px; }
+  .input-tbl-wrap thead{ display: none; }
+  /* দুই কলাম ইনপুট (b/d) — মোবাইলে পাশাপাশি */
+  .two-col-row td.cell{ display: inline-block; width: 48% !important; vertical-align: top; }
+  .two-col-row td.label{ display: block; width: 100%; }
+  table.output-tbl{ font-size: .76rem; }
+  table.output-tbl th, table.output-tbl td{ padding: 5px 4px; }
+  .dl-bar{ flex-direction: column; gap: 8px; }
+  .dl-bar button{ width: 100%; }
+  .card{ padding: 10px 8px; }
+  .pagebadge{ font-size: .72rem; }
+  h2{ font-size: .92rem !important; }
+}
+
+/* ============ ডাউনলোড বার ============ */
+.dl-bar{
+  display: flex; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 18px; align-items: center;
+}
+.dl-btn{
+  display: flex; align-items: center; gap: 7px;
+  padding: 9px 18px; border-radius: 10px; border: none;
+  font-size: .88rem; font-weight: 600; cursor: pointer;
+  transition: opacity .15s;
+}
+.dl-btn:hover{ opacity: .85; }
+.dl-btn.pdf{ background: #d32f2f; color: #fff; }
+.dl-btn.excel{ background: #1b5e20; color: #fff; }
+.dl-btn svg{ flex-shrink: 0; }
+
+/* ============ প্রিন্ট ============ */
+@media print{
+  .modeswitch, .dl-bar, #arrear-extra-allow-wrap, #arrear-extra-ded-wrap,
+  #newfix-extra-allow-wrap, #newfix-extra-ded-wrap,
+  .note, button{ display: none !important; }
+  body{ background: #fff; }
+  .wrap{ padding: 0; max-width: 100%; }
+  .card{ border: 1px solid #ccc; page-break-inside: avoid; margin-bottom: 10px; }
+  table{ font-size: .78rem; }
+  .pagebadge{ background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  th{ background: #1b5e20 !important; color: #fff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
     --bg:#14161a; --card:#1d2024; --text:#eef0f2; --muted:#9aa1ab;
@@ -88,11 +149,12 @@ th:first-child{background:var(--th-bg);}
 footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;}
 .hidden{display:none !important;}
 </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="wrap">
   <h1>পে ফিক্সেশন ক্যালকুলেটর — জাতীয় বেতন স্কেল ২০২৬</h1>
-  <p class="sub">শিট৩ (বেতন স্কেল ২০১৫ ও ২০২৬) এবং শিট৪ এর ইনপুট/আউটপুট টেবিল অনুসরণ করা হয়েছে। সব হিসাব ব্রাউজারেই হয়।</p>
+
 
   <div class="legend">
     <span><i class="dot" style="background:var(--green)"></i> সবুজ = ড্রপডাউন থেকে নির্বাচন</span>
@@ -110,7 +172,7 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
   <div id="mode-arrear">
     <div class="card">
       <h2>ইনপুট অংশ</h2>
-      <div class="overflow">
+      <div class="overflow input-tbl-wrap">
         <table>
           <thead><tr><th>বিবরণ</th><th>২০২৬ ভিত্তিক (প্রাপ্য)</th><th>২০১৫ ভিত্তিক (গৃহীত)</th></tr></thead>
           <tbody>
@@ -134,67 +196,67 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
               <td class="label">১ জুলাই ২০২৬ ইনক্রিমেন্টসহ মূল বেতন (বর্তমানে গৃহীত)</td>
               <td class="cell" colspan="2"><select id="d10" class="f-green"></select></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">মূল বেতন</td>
               <td class="cell"><input id="b10" class="f-auto" readonly></td>
               <td class="cell"><input id="d10show" class="f-auto" readonly></td>
             </tr>
-            <tr>
-              <td class="label">বাড়ী ভাড়া (৪০%)</td>
+            <tr class="two-col-row">
+              <td class="label">বাড়ী ভাড়া</td>
               <td class="cell"><input id="b11" class="f-auto" readonly></td>
               <td class="cell"><input id="d11" class="f-auto" readonly></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">চিকিৎসা ভাতা</td>
               <td class="cell"><input type="number" id="b12" class="f-yellow" value="1500"></td>
               <td class="cell"><input type="number" id="d12" class="f-yellow" value="1500"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">বিশেষ সুবিধা ভাতা (গ্রেড ১–৯: ১০%, গ্রেড ১০–২০: ১৫%)</td>
               <td class="cell"><input id="b13" class="f-auto" readonly value="0" title="২০২৬ ভিত্তিক প্রাপ্য কলামে বিশেষ সুবিধা ভাতা প্রযোজ্য নয়"></td>
               <td class="cell"><input id="d13" class="f-auto" readonly></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">শিশু শিক্ষা ভাতা</td>
               <td class="cell"><input type="number" id="b14" class="f-yellow" value="1000"></td>
               <td class="cell"><input type="number" id="d14" class="f-yellow" value="1000"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">পাহাড়ী ভাতা</td>
               <td class="cell"><input type="number" id="b15" class="f-yellow" value="3000"></td>
               <td class="cell"><input type="number" id="d15" class="f-yellow" value="3000"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">পিএফ (ডিফল্ট ১০%, পরিবর্তনযোগ্য)</td>
               <td class="cell"><input type="number" id="b21" class="f-yellow"></td>
               <td class="cell"><input type="number" id="d21" class="f-yellow"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">গৃহ নির্মাণ</td>
               <td class="cell"><input type="number" id="b22" class="f-yellow" value="4202"></td>
               <td class="cell"><input type="number" id="d22" class="f-yellow" value="4202"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">বদান্য</td>
               <td class="cell"><input type="number" id="b23" class="f-yellow" value="200"></td>
               <td class="cell"><input type="number" id="d23" class="f-yellow" value="200"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">কম্পিউটার অগ্রিম</td>
               <td class="cell"><input type="number" id="b24" class="f-yellow" value="0"></td>
               <td class="cell"><input type="number" id="d24" class="f-yellow" value="0"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">মোটর সা. অগ্রিম</td>
               <td class="cell"><input type="number" id="b25" class="f-yellow" value="3657"></td>
               <td class="cell"><input type="number" id="d25" class="f-yellow" value="3657"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">আয়কর</td>
               <td class="cell"><input type="number" id="b26" class="f-yellow" value="0"></td>
               <td class="cell"><input type="number" id="d26" class="f-yellow" value="0"></td>
             </tr>
-            <tr>
+            <tr class="two-col-row">
               <td class="label">PERSONAL LOAN</td>
               <td class="cell"><input type="number" id="b27" class="f-yellow" value="15800"></td>
               <td class="cell"><input type="number" id="d27" class="f-yellow" value="15800"></td>
@@ -222,6 +284,16 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
       </div>
     </div>
 
+    <div class="dl-bar">
+      <button class="dl-btn pdf" onclick="downloadPDF('arrear')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        PDF ডাউনলোড
+      </button>
+      <button class="dl-btn excel" onclick="downloadExcel('arrear')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Excel ডাউনলোড
+      </button>
+    </div>
     <div class="card">
       <span class="pagebadge">আউটপুট অংশ — ১ম পাতা: বেতন নির্ধারণ</span>
       <div class="result-list" id="page1"></div>
@@ -230,7 +302,7 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
     <div class="card">
       <span class="pagebadge">আউটপুট অংশ — ২য় পাতা: বেতন ও ভাতাদি (এরিয়ার হিসাব)</span>
       <div class="overflow">
-        <table id="tbl-pay">
+        <table id="tbl-pay" class="output-tbl">
           <thead><tr><th>বিবরণ</th><th>মূল বেতন</th><th>বাড়ী ভাড়া</th><th>চিকিৎসা ভাতা</th><th>বিশেষ সুবিধা ভাতা</th><th>শিশু শিক্ষা ভাতা</th><th>পাহাড়ী ভাতা</th><th>মোট</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -240,7 +312,7 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
     <div class="card">
       <span class="pagebadge">কর্তন সমূহ</span>
       <div class="overflow">
-        <table id="tbl-ded">
+        <table id="tbl-ded" class="output-tbl">
           <thead><tr><th>বিবরণ</th><th>পিএফ</th><th>গৃহ নির্মাণ</th><th>বদান্য</th><th>কম্পিউটার অগ্রিম</th><th>মোটর সা. অগ্রিম</th><th>আয়কর</th><th>ব্যক্তিগত ঋণ</th><th>মোট কর্তন</th><th>নীট প্রদেয়</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -260,7 +332,7 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
   <div id="mode-newfix" class="hidden">
     <div class="card">
       <h2>ইনপুট অংশ</h2>
-      <div class="overflow">
+      <div class="overflow input-tbl-wrap">
         <table>
           <thead><tr><th>বিবরণ</th><th>২০২৬ ভিত্তিক (প্রাপ্য)</th></tr></thead>
           <tbody>
@@ -359,10 +431,20 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
       </div>
     </div>
 
+    <div class="dl-bar">
+      <button class="dl-btn pdf" onclick="downloadPDF('newfix')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+        PDF ডাউনলোড
+      </button>
+      <button class="dl-btn excel" onclick="downloadExcel('newfix')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+        Excel ডাউনলোড
+      </button>
+    </div>
     <div class="card">
       <span class="pagebadge" id="n-badge-pay">আউটপুট অংশ — ২য় পাতা: বেতন ও ভাতাদি</span>
       <div class="overflow">
-        <table id="n-tbl-pay">
+        <table id="n-tbl-pay" class="output-tbl">
           <thead><tr><th>বিবরণ</th><th>মূল বেতন</th><th>বাড়ী ভাড়া</th><th>চিকিৎসা ভাতা</th><th>শিশু শিক্ষা ভাতা</th><th>পাহাড়ী ভাতা</th><th id="n-pay-extra-hdr"></th><th>মোট</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -372,7 +454,7 @@ footer{text-align:center; color:var(--muted); font-size:.75rem; margin-top:10px;
     <div class="card">
       <span class="pagebadge">কর্তন সমূহ</span>
       <div class="overflow">
-        <table id="n-tbl-ded">
+        <table id="n-tbl-ded" class="output-tbl">
           <thead><tr><th>বিবরণ</th><th>পিএফ</th><th>গৃহ নির্মাণ</th><th>বদান্য</th><th>কম্পিউটার অগ্রিম</th><th>মোটর সা. অগ্রিম</th><th>আয়কর</th><th>ব্যক্তিগত ঋণ</th><th>মোট কর্তন</th><th>নীট প্রদেয়</th></tr></thead>
           <tbody></tbody>
         </table>
@@ -654,7 +736,7 @@ function calcArrear(){
 
   document.getElementById('page1').innerHTML = `
     <div class="rline"><span>পে-স্কেল ২০১৫ মোতাবেক প্রারম্ভিক ধাপ (গ্রেড ${g})</span><span class="v">${fmt(I6)}</span></div>
-    <div class="rline"><span>ব্যবধান (৩০ জুন ২৬ এর মূল বেতন − উপরের ধাপ)</span><span class="v">${fmt(I7)}</span></div>
+    <div class="rline"><span>ব্যবধান (পে-স্কেল-২০১৫ অনুযায়ী ৩০ জুন ২০২৬ এর মূল বেতন −প্রারম্ভিক ধাপ)</span><span class="v">${fmt(I7)}</span></div>
     <div class="rline step"><span>পে-স্কেল ২০২৬ মোতাবেক প্রারম্ভিক ধাপ (গ্রেড ${g})</span><span class="v">${fmt(I9)}</span></div>
     <div class="rline"><span>পূর্বের ব্যবধান</span><span class="v">${fmt(I10)}</span></div>
     <div class="rline"><span>নতুন সম্ভাব্য মূল বেতন</span><span class="v">${fmt(I11)}</span></div>
@@ -877,7 +959,7 @@ function calcNewFix(){
   const nExtraAllowCols = nfExtraAllows.map(r=>`<td>${fmt(r.bVal)}</td>`).join('');
 
   document.querySelector('#n-tbl-pay tbody').innerHTML = `
-    <tr><td>${monthLabel} মাসে প্রাপ্য</td><td>${fmt(I25)}</td><td>${fmt(J25)}</td><td>${fmt(K25)}</td><td>${fmt(M25)}</td><td>${fmt(N25)}</td>${nExtraAllowCols}<td>${fmt(O25)}</td></tr>
+    <tr><td>${monthLabel}</td><td>${fmt(I25)}</td><td>${fmt(J25)}</td><td>${fmt(K25)}</td><td>${fmt(M25)}</td><td>${fmt(N25)}</td>${nExtraAllowCols}<td>${fmt(O25)}</td></tr>
   `;
 
   const I31=pf, J31=house, K31=benev, L31=comp, M31=motor, N31=tax, O31=ploan;
@@ -894,7 +976,7 @@ function calcNewFix(){
   });
 
   document.querySelector('#n-tbl-ded tbody').innerHTML = `
-    <tr><td>${monthLabel} মাসে প্রাপ্য</td><td>${fmt(I31)}</td><td>${fmt(J31)}</td><td>${fmt(K31)}</td><td>${fmt(L31)}</td><td>${fmt(M31)}</td><td>${fmt(N31)}</td><td>${fmt(O31)}</td>${nExtraDedCols}<td>${fmt(P31)}</td><td>${fmt(Q31)}</td></tr>
+    <tr><td>${monthLabel}</td><td>${fmt(I31)}</td><td>${fmt(J31)}</td><td>${fmt(K31)}</td><td>${fmt(L31)}</td><td>${fmt(M31)}</td><td>${fmt(N31)}</td><td>${fmt(O31)}</td>${nExtraDedCols}<td>${fmt(P31)}</td><td>${fmt(Q31)}</td></tr>
   `;
 }
 
@@ -964,6 +1046,111 @@ refreshDropdowns();
 calcArrear();
 refreshNewFixDropdown();
 calcNewFix();
+
+/* ============================================================
+   PDF ও Excel ডাউনলোড
+   ============================================================ */
+function getReportTitle(mode){
+  if(mode==='arrear'){
+    const g = document.getElementById('grade').value;
+    const d6 = document.getElementById('d6').value;
+    return `বেতন নির্ধারণ রিপোর্ট — এরিয়ার হিসাব (গ্রেড ${g}, মূল বেতন ${d6})`;
+  } else {
+    const g = document.getElementById('n-grade').value;
+    const d6 = document.getElementById('n-d6').value;
+    const mo = document.getElementById('n-month');
+    const yr = document.getElementById('n-year').value;
+    const mon = mo ? mo.options[mo.selectedIndex]?.text : '';
+    return `বেতন নির্ধারণ রিপোর্ট — ${mon}/${yr} (গ্রেড ${g}, মূল বেতন ${d6})`;
+  }
+}
+
+function downloadPDF(mode){
+  const title = getReportTitle(mode);
+  const tables = mode==='arrear'
+    ? ['tbl-pay','tbl-ded']
+    : ['n-tbl-pay','n-tbl-ded'];
+
+  // payfix summary table
+  const fixTbl = mode==='arrear'
+    ? document.querySelector('#arrear-section table:not(#tbl-pay):not(#tbl-ded)')
+    : document.querySelector('#newfix-section table:not(#n-tbl-pay):not(#n-tbl-ded)');
+
+  let tablesHTML = '';
+  // ইনপুট সামারি টেবিল (প্রথম কার্ডের টেবিল)
+  const inputTbl = mode==='arrear'
+    ? document.querySelector('#mode-arrear .input-tbl-wrap table')
+    : document.querySelector('#mode-newfix .input-tbl-wrap table');
+  if(inputTbl) tablesHTML += `<h3 style="color:#1b5e20;margin:18px 0 6px;">ইনপুট তথ্য</h3>${inputTbl.outerHTML}`;
+
+  // output tables
+  tables.forEach(id=>{
+    const t = document.getElementById(id);
+    if(!t) return;
+    const card = t.closest('.card');
+    const badge = card ? card.querySelector('.pagebadge') : null;
+    const label = badge ? badge.textContent : '';
+    tablesHTML += `<h3 style="color:#1b5e20;margin:18px 0 6px;">${label}</h3>${t.outerHTML}`;
+  });
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html lang="bn"><head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;600;700&display=swap');
+      body{font-family:'Hind Siliguri',sans-serif;padding:20px;color:#111;font-size:12px;}
+      h1{font-size:15px;color:#1b5e20;text-align:center;margin-bottom:4px;}
+      h3{font-size:12px;color:#1b5e20;margin:14px 0 4px;}
+      p.sub{text-align:center;font-size:11px;color:#555;margin-bottom:16px;}
+      table{border-collapse:collapse;width:100%;margin-bottom:8px;font-size:11px;}
+      th{background:#1b5e20;color:#fff;padding:6px 5px;text-align:center;}
+      td{border:1px solid #ccc;padding:5px 4px;text-align:center;}
+      td:first-child{text-align:left;}
+      tr:nth-child(even) td{background:#f5f5f5;}
+      .sumrow td,.total td{background:#fffde7;font-weight:700;}
+      @media print{button{display:none!important;}}
+    </style>
+  </head><body>
+    <h1>${title}</h1>
+    <p class="sub">বাংলাদেশ কৃষি ব্যাংক — রাঙ্গামাটি আঞ্চলিক কার্যালয়</p>
+    ${tablesHTML}
+    <p style="text-align:right;font-size:10px;color:#888;margin-top:20px;">তৈরি: পে ফিক্সেশন ক্যালকুলেটর ২০২৬</p>
+    <script>window.onload=()=>{ window.print(); }<\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+function downloadExcel(mode){
+  const title = getReportTitle(mode);
+  const wb = XLSX.utils.book_new();
+
+  const tables = mode==='arrear'
+    ? [{id:'tbl-pay',name:'বেতন ভাতা'},{id:'tbl-ded',name:'কর্তন সমূহ'}]
+    : [{id:'n-tbl-pay',name:'বেতন ভাতা'},{id:'n-tbl-ded',name:'কর্তন সমূহ'}];
+
+  // ইনপুট sheet
+  const inputTbl = mode==='arrear'
+    ? document.querySelector('#mode-arrear .input-tbl-wrap table')
+    : document.querySelector('#mode-newfix .input-tbl-wrap table');
+  if(inputTbl){
+    const ws = XLSX.utils.table_to_sheet(inputTbl);
+    XLSX.utils.book_append_sheet(wb, ws, 'ইনপুট তথ্য');
+  }
+
+  tables.forEach(({id,name})=>{
+    const t = document.getElementById(id);
+    if(!t) return;
+    const ws = XLSX.utils.table_to_sheet(t);
+    // শিরোনাম row যোগ
+    XLSX.utils.sheet_add_aoa(ws, [[title]], {origin: 'A1'});
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  });
+
+  const fname = (mode==='arrear' ? 'arrear' : 'pay_fixation')+'_'+new Date().toISOString().slice(0,10)+'.xlsx';
+  XLSX.writeFile(wb, fname);
+}
+
 </script>
 </body>
 </html>
