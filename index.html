@@ -703,8 +703,8 @@ function calcArrear(){
   const I18v = I18===null ? NA : I18;
 
   // বিশেষ সুবিধা ভাতা: গ্রেড-ভিত্তিক হারে D6 (২০১৫ স্কেলে গৃহীত মূল বেতন) এর উপর
-  const D13_auto = round0(D6 * sRate);  // ২০১৫ ভিত্তিক (গৃহীত)
-  const B13_auto = round0(D6 * sRate);  // ২০২৬ ভিত্তিক (প্রাপ্য) — একই ভিত্তি
+  const D13_auto = round0(D10 * sRate);  // ২০১৫ ভিত্তিক (গৃহীত) — D10 (ইনক্রিমেন্টসহ মূল বেতন) এর উপর
+  const B13_auto = round0(D10 * sRate);  // ২০২৬ ভিত্তিক (প্রাপ্য) — D10 এর উপর
 
   const B10 = I15;
   const B11 = houseRentAllowance(D6), D11 = houseRentAllowance(D10);
@@ -747,7 +747,7 @@ function calcArrear(){
     <div class="rline sum"><span>জানুয়ারি–জুন ২৭ এ ${r2pct} বৃদ্ধি — ২য় ধাপ (গ্রেড ${g})</span><span class="v">${fmt(I16)}</span></div>
     <div class="rline sum"><span>জুলাই–ডিসেম্বর ২৭ এ ১০০% বৃদ্ধি — ৩য় ধাপ</span><span class="v">${fmt(I17)}</span></div>
     <div class="rline step"><span>নতুন ইনক্রিমেন্টসহ ১ জুলাই ২৭ এ মূল বেতন</span><span class="v">${fmt(I18v)}</span></div>
-    <div class="rline"><span>বিশেষ সুবিধা ভাতার হার (গ্রেড ${g})</span><span class="v">${sRatePct} — ভিত্তি: ৳${fmt(D6)}</span></div>
+    <div class="rline"><span>বিশেষ সুবিধা ভাতার হার (গ্রেড ${g})</span><span class="v">${sRatePct} — ভিত্তি: ৳${fmt(D10)} (ইনক্রিমেন্টসহ মূল বেতন)</span></div>
   `;
 
   // অতিরিক্ত ভাতা সংগ্রহ (arrear mode)
